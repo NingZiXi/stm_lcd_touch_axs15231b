@@ -1,0 +1,1 @@
+I2C request and response decoding are based on Espressif Systems esp_lcd_axs15231b (Apache-2.0, LICENSE-ESPRESSIF). The remainder of the component is MIT (LICENSE). This component is not a verbatim copy of Espressif's ESP-IDF implementation.
