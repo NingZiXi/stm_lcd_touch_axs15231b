@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import tempfile
 
-LCD_PIN = 'da713eecea80c5abb59973a3b003015800011b4a'
+LCD_PIN = 'c359e54a657be38aec90c797ea19ee3d492d9284'
 COMPONENT = Path(__file__).resolve().parents[1]
 
 

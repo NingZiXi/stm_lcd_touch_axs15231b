@@ -56,7 +56,8 @@ if(NOT TARGET stm_lcd)
         endif()
         FetchContent_Declare(stm_lcd
             GIT_REPOSITORY "${STM_LCD_GIT_REPOSITORY}"
-            GIT_TAG da713eecea80c5abb59973a3b003015800011b4a)
+            GIT_TAG c359e54a657be38aec90c797ea19ee3d492d9284 # stm_lcd v1.0.0
+        )
         FetchContent_MakeAvailable(stm_lcd)
     endif()
 endif()

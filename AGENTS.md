@@ -16,7 +16,7 @@
 - 原始坐标交由 stm_lcd 统一 swap → 边界 → mirror，不能再在驱动或应用变换。get_data 不读总线、不消费快照。
 - 驱动不依赖 HAL/LVGL，不实现离线重试/过期策略；由 port 处理，不新增后台任务。
 - 不在掉线恢复时自动复位，触摸复位可能与面板共享。port 借用期间不能复位或删除。
-- 两 AXS 共用固定 stm_lcd 提交 `da713eecea80c5abb59973a3b003015800011b4a`，依赖选项/优先级以 CMake 和 README 为准，不追踪 main。
+- 两 AXS 共用固定 stm_lcd v1.0.0 提交 `c359e54a657be38aec90c797ea19ee3d492d9284`，依赖选项/优先级以 CMake 和 README 为准，不追踪 main。
 - 主机测试需同级 stm_common/stm_lcd，保留报文、失败、越界、方向与非消费快照，以及 C/C++ 消费编译。
 
 ## 编码与注释
@@ -46,7 +46,7 @@ ctest --test-dir build/tests --output-on-failure
 
 ## 依赖回归
 
-在本组件根目录执行以下命令，需要 Python 3 和 Git。测试还包含固定提交拉取和双组件解析，默认本地 Git 仓库必须包含 README 标注的固定 stm_lcd 提交，普通无 .git 的拷贝不能替代：
+在本组件根目录执行以下命令，需要 Python 3 和 Git。测试还包含固定提交拉取和双组件解析，默认本地 Git 仓库必须包含 README 标注的固定 stm_lcd v1.0.0 提交，普通无 .git 的拷贝不能替代：
 
 ```sh
 python tests/test_dependency.py --lcd-source /absolute/path/to/stm_lcd --common-source /absolute/path/to/stm_common
