@@ -1,11 +1,15 @@
+/**
+ * @file    stm_lcd_touch_axs15231b.c
+ * @brief   实现 AXS15231B 单触点请求及响应解析。
+ */
 #include "stm_lcd_touch_axs15231b.h"
 #include "stm_lcd_impl.h"
 #include <stdlib.h>
 
 struct lcd_touch_axs15231b_context
 {
-    struct stm_lcd_touch base;           /**< Embedded generic snapshot and transform. */
-    lcd_touch_axs15231b_config_t config; /**< Controller reset configuration. */
+    struct stm_lcd_touch base;           // 嵌入式触点快照及变换。
+    lcd_touch_axs15231b_config_t config; // 控制器复位配置。
 };
 
 static stm_err_t reset(stm_lcd_touch_handle_t base)

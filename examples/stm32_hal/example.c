@@ -1,4 +1,7 @@
-/** @file example.c @brief Raw I2C request/STOP/read with generic snapshots. */
+/**
+ * @file    example.c
+ * @brief   演示通用触摸接入及板级配置边界。
+ */
 #include "stm_lcd_touch_axs15231b.h"
 #include "stm_lcd_i2c_f4.h"
 static stm_lcd_i2c_f4_t i2c;
@@ -46,7 +49,7 @@ int main(void)
         err = stm_lcd_touch_read_data(touch);
         if (err == STM_OK)
             err = stm_lcd_touch_get_data(touch, &point, 1, &count);
-        /* Use point only when err==STM_OK && count==1. Port owns retry/stale policy in LVGL applications. */
+        // 仅在成功且 count 为 1 时使用触点；LVGL 的重试和过期由 port 管理。
         HAL_Delay(20);
     }
 }

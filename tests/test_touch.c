@@ -1,7 +1,6 @@
 /**
- * @file test_touch.c
- *
- * @brief 组件主机回归测试，不替代实板验收。
+ * @file    test_touch.c
+ * @brief   验证组件主机回归，不替代实板验收。
  */
 #include "stm_lcd_touch_axs15231b.h"
 #include "stm_lcd_impl.h"
