@@ -26,3 +26,12 @@ if(NOT TARGET stm_common)
 endif()
 target_link_libraries(stm_lcd_touch_axs15231b PUBLIC stm_common)
 
+
+if(NOT TARGET stm_lcd)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../stm_lcd/CMakeLists.txt")
+        add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../stm_lcd" "${CMAKE_CURRENT_BINARY_DIR}/stm_lcd")
+    else()
+        message(FATAL_ERROR "stm_lcd is missing. Provide its target or sibling source directory; unpublished versions are not fetched.")
+    endif()
+endif()
+target_link_libraries(stm_lcd_touch_axs15231b PUBLIC stm_lcd)

@@ -1,119 +1,78 @@
-/**
- * @file stm_lcd_touch_axs15231b.c
- *
- * @brief AXS15231B 触摸请求、帧解析与实例生命周期。
- */
 #include "stm_lcd_touch_axs15231b.h"
+#include "stm_lcd_impl.h"
 #include <stdlib.h>
-#include <string.h>
 
 struct lcd_touch_axs15231b_context
 {
-    lcd_touch_axs15231b_config_t config;
-    lcd_touch_axs15231b_point_t point;
-    uint8_t count;
+    struct stm_lcd_touch base;           /**< Embedded generic snapshot and transform. */
+    lcd_touch_axs15231b_config_t config; /**< Controller reset configuration. */
 };
 
-stm_err_t lcd_touch_axs15231b_create(const lcd_touch_axs15231b_config_t *config,
-                                     lcd_touch_axs15231b_handle_t *out)
+static stm_err_t reset(stm_lcd_touch_handle_t base)
 {
-    if (!config || !out)
-        return STM_ERR_INVALID_ARG;
-    if (*out)
-        return STM_ERR_INVALID_STATE;
-    if (!config->write || !config->read || !config->x_max || !config->y_max ||
-        config->swap_xy > 1u || config->mirror_x > 1u || config->mirror_y > 1u ||
-        (config->reset && !config->delay_ms))
-        return STM_ERR_INVALID_CONFIG;
-    lcd_touch_axs15231b_handle_t touch = calloc(1, sizeof(*touch));
-    if (!touch)
-        return STM_ERR_NO_MEM;
-    touch->config = *config;
-    *out = touch;
-    return STM_OK;
-}
-
-stm_err_t lcd_touch_axs15231b_delete(lcd_touch_axs15231b_handle_t *handle)
-{
-    if (!handle)
-        return STM_ERR_INVALID_ARG;
-    free(*handle);
-    *handle = NULL;
-    return STM_OK;
-}
-
-stm_err_t lcd_touch_axs15231b_reset(lcd_touch_axs15231b_handle_t touch)
-{
-    if (!touch)
-        return STM_ERR_INVALID_ARG;
-    touch->count = 0;
-    if (!touch->config.reset)
-        return STM_OK;
-    stm_err_t err = touch->config.reset(touch->config.io, 0);
+    struct lcd_touch_axs15231b_context *t = (void *)base;
+    if (!t->config.reset)
+        return STM_ERR_NOT_SUPPORTED;
+    stm_err_t err = t->config.reset(t->config.control_context, 0);
     if (err != STM_OK)
         return err;
-    touch->config.delay_ms(touch->config.io, 200);
-    err = touch->config.reset(touch->config.io, 1);
+    t->config.delay_ms(t->config.control_context, 200);
+    err = t->config.reset(t->config.control_context, 1);
     if (err != STM_OK)
         return err;
-    touch->config.delay_ms(touch->config.io, 200);
+    t->config.delay_ms(t->config.control_context, 200);
     return STM_OK;
 }
 
-stm_err_t lcd_touch_axs15231b_read_data(lcd_touch_axs15231b_handle_t touch)
+static stm_err_t read_data(stm_lcd_touch_handle_t base, stm_lcd_touch_point_t *point, size_t *count)
 {
-    if (!touch)
-        return STM_ERR_INVALID_ARG;
     static const uint8_t request[11] = {0xB5, 0xAB, 0xA5, 0x5A, 0, 0, 0, 8, 0, 0, 0};
     uint8_t response[8] = {0};
-    // 先清本帧状态，通信失败后不能复用上一帧的按下坐标。
-    touch->count = 0;
-    stm_err_t err = touch->config.write(touch->config.io, request, sizeof request);
+    *count = 0;
+    stm_err_t err = stm_lcd_io_write(base->io, request, sizeof request);
     if (err != STM_OK)
         return err;
-    // 请求与响应是两笔独立事务，跨事务仲裁由板级负责。
-    err = touch->config.read(touch->config.io, response, sizeof response);
+    err = stm_lcd_io_read(base->io, response, sizeof response);
     if (err != STM_OK)
         return err;
     if (response[1] > 1u)
         return STM_ERR_VERIFY;
     if (!response[1])
         return STM_OK;
-    // 按字节提取 12 位坐标，避免 C 位域布局差异；
-    // 不将 event 位混入坐标。
-    uint16_t x = (uint16_t)(((uint16_t)(response[2] & 0x0fu) << 8) | response[3]);
-    uint16_t y = (uint16_t)(((uint16_t)(response[4] & 0x0fu) << 8) | response[5]);
-    if (touch->config.swap_xy)
-    {
-        uint16_t tmp = x;
-        x = y;
-        y = tmp;
-    }
-    if (x >= touch->config.x_max || y >= touch->config.y_max)
-        return STM_OK;
-    // 镜像端点为 size-1，避免零点映射到上界之外。
-    if (touch->config.mirror_x)
-        x = (uint16_t)(touch->config.x_max - 1u - x);
-    if (touch->config.mirror_y)
-        y = (uint16_t)(touch->config.y_max - 1u - y);
-    touch->point.x = x;
-    touch->point.y = y;
-    touch->point.id = 0;
-    touch->count = 1;
+    point->x = (uint16_t)(((uint16_t)(response[2] & 0x0fu) << 8) | response[3]);
+    point->y = (uint16_t)(((uint16_t)(response[4] & 0x0fu) << 8) | response[5]);
+    point->id = 0;
+    *count = 1;
     return STM_OK;
 }
 
-stm_err_t lcd_touch_axs15231b_get_data(lcd_touch_axs15231b_handle_t touch,
-                                       lcd_touch_axs15231b_point_t *points,
-                                       size_t capacity,
-                                       size_t *count)
+static void destroy(stm_lcd_touch_handle_t t)
 {
-    if (count)
-        *count = 0;
-    if (!touch || !count || (capacity && !points))
+    free(t);
+}
+
+static const stm_lcd_touch_ops_t ops = {.reset = reset, .read_data = read_data, .destroy = destroy};
+
+stm_err_t lcd_touch_axs15231b_create(const lcd_touch_axs15231b_config_t *c,
+                                     stm_lcd_touch_handle_t *out)
+{
+    if (!c || !out)
         return STM_ERR_INVALID_ARG;
-    *count = touch->count && capacity ? 1u : 0u;
-    if (*count)
-        memcpy(points, &touch->point, sizeof(*points));
+    if (*out)
+        return STM_ERR_INVALID_STATE;
+    if (!c->io || !c->io->ops || !c->io->ops->write || !c->io->ops->read ||
+        (c->reset && !c->delay_ms))
+        return STM_ERR_INVALID_CONFIG;
+    struct lcd_touch_axs15231b_context *t = calloc(1, sizeof(*t));
+    if (!t)
+        return STM_ERR_NO_MEM;
+    stm_err_t err = stm_lcd_touch_base_init(&t->base, &ops, c->io, &c->coordinates);
+    if (err != STM_OK)
+    {
+        free(t);
+        return err;
+    }
+    t->config = *c;
+    *out = &t->base;
     return STM_OK;
 }
